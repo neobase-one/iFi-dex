@@ -45,11 +45,14 @@ library SwapCurve {
      *    a liquidity bump point, or the end of a tick bitmap horizon.) The curve will 
      *    never move past this tick boundary in the call. Caller's responsibility is to 
      *    set this parameter in the correct direction. I.e. buys should be the boundary 
-     *    from above and sells from below. Represented as a price tick index. */
+     *    from above and sells from below. Represented as a price tick index. 
+     * @return paidBase  paidQuote, the amount in fees that were paid out in
+     *     this swap. Used to increment the fee based rewards counter at a higher level*/
     function swapToLimit (CurveMath.CurveState memory curve,
                           Chaining.PairFlow memory accum,
                           Directives.SwapDirective memory swap,
-                          PoolSpecs.Pool memory pool, int24 bumpTick) pure internal {
+                          PoolSpecs.Pool memory pool, int24 bumpTick) pure internal
+                          returns (int128, int128) {
         uint128 limitPrice = determineLimit(bumpTick, swap.limitPrice_, swap.isBuy_);
         uint128 startPrice = curve.priceRoot_;
 
@@ -66,6 +69,8 @@ library SwapCurve {
             (curve, swap.inBaseQty_, swap.isBuy_, swap.qty_, limitPrice);
         accum.accumSwap(swap.inBaseQty_, paidBase, paidQuote, 0);
         assertPriceDirection(swap.isBuy_, curve, startPrice);
+
+        return (paidBase, paidQuote);
     }
 
     /* @notice Validates the invariant that the price change is in the direction of the swap. */

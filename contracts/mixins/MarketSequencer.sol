@@ -75,8 +75,12 @@ contract MarketSequencer is TradeMatcher {
                            bool isBuy
     ) internal returns (Chaining.PairFlow memory flow) {
         CurveMath.CurveState memory curve = snapCurve(pool.hash_);
-        sweepSwapLiq(flow, curve, curve.priceRoot_.getTickAtSqrtRatio(), dir, pool);
+        (int128 paidInBase, int128 paidInQuote) = sweepSwapLiq(flow, curve, curve.priceRoot_.getTickAtSqrtRatio(), dir, pool);
+
+        // used for incentives, does not affect the swap
+        updateIncentivePoolFeeAccumulator(paidInBase, paidInQuote, pool.hash_);
         commitCurve(pool.hash_, curve);
+
         if (isBuy) {
             emit CrocEvents.Swap(lockHolder_, base, quote, poolIdx, flow.baseFlow_, flow.quoteFlow_);
         } else {

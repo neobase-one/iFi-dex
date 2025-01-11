@@ -373,11 +373,15 @@ contract TradeMatcher is PositionRegistrar, LiquidityCurve, KnockoutCounter,
      * @param swap The user specified directive governing the size, direction and limit
      *             price of the swap to be executed.
      * @param pool The pool's market specification notably its swap fee rate and the
-     *             protocol take rate. */
+     *             protocol take rate. 
+     * @return paidInBase paidInQuote the amount of fees paid in the base and quote
+     *      tokens, used for computing and saving total fees for this pool at a higher
+     *      level */
     function sweepSwapLiq (Chaining.PairFlow memory accum,
                            CurveMath.CurveState memory curve, int24 midTick,
                            Directives.SwapDirective memory swap,
-                           PoolSpecs.PoolCursor memory pool) internal {
+                           PoolSpecs.PoolCursor memory pool) internal 
+                           returns (int128 paidInBase, int128 paidInQuote) {
         require(swap.isBuy_ ? curve.priceRoot_ <= swap.limitPrice_ : 
                               curve.priceRoot_ >= swap.limitPrice_, "SD");
         
@@ -390,8 +394,11 @@ contract TradeMatcher is PositionRegistrar, LiquidityCurve, KnockoutCounter,
             // if the swap will exhaust the bitmap.
             (int24 bumpTick, bool spillsOver) = pinBitmap
                 (pool.hash_, swap.isBuy_, midTick);
-            curve.swapToLimit(accum, swap, pool.head_, bumpTick);
-            
+
+            // swap over a given tick and accumulate the fees generated during this operation
+            (int128 pb, int128 pq) = curve.swapToLimit(accum, swap, pool.head_, bumpTick);
+            paidInBase += pb;
+            paidInQuote += pq;
             
             // The swap can be in one of four states at this point: 1) qty exhausted,
             // 2) limit price reached, 3) bump or barrier point reached on the curve.
@@ -415,7 +422,9 @@ contract TradeMatcher is PositionRegistrar, LiquidityCurve, KnockoutCounter,
                     // Otherwise, we keep swapping since we still have some distance on
                     // the curve to cover until we reach a bump point.
                     if (!tightSpill) {
-                        curve.swapToLimit(accum, swap, pool.head_, bumpTick);
+                        (int128 pb1, int128 pq1) = curve.swapToLimit(accum, swap, pool.head_, bumpTick);
+                        paidInBase += pb1;
+                        paidInQuote += pq1;
                         doMore = hasSwapLeft(curve, swap);
                     }
                 }
