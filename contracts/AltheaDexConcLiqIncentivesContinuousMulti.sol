@@ -7,32 +7,36 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-/* @title Althea Dex Continuous Concentrated liquidity Multi Token Incentives contract
+/* @title Althea Dex Continuous Concentrated Liquidity Multi Token Incentives contract
  * @notice This contract provides incentives for concentrated liquidity on the Althea Dex using the externally accessible liquidity counters
  *         
- *         When a user provides liquidity to or removes liquidity from a pool liquidity added and removed accumulators are increemented. This
+ *         When a user provides liquidity to or removes liquidity from a pool, liquidity added and removed accumulators are incremented. This
  *         contract allows users to claim rewards based on the amount of liquidity they have provided and how long it has been provided.
  *         
  *         User Flow:
  *         1. User provides liquidity to a pool
  *         2. User calls register for rewards to start tracking their rewards
- *         3. After some time has pased the user calls claim rewards. This will calculate their rewards based on the number of blocks that have elapsed, 
- *            the amount of liquidity and the rewards ratio for the pool and token type. Then store the amount of reward tokens owed to that user.
- *         4. User can call withdraw rewards to withdraw the rewards owed to them. Separating (3) and (4) allows the user to accumulate rewards even if
- *            the contract does not have the sufficient reward tokens to pay them out at that moment. A convience function is provided to do both at once.
- *         5. Once the user has called claim rewards they can either make no changes to their liquidity. If no changes are made they can call claim rewards
- *            again after some time. If they have added or removed liquidity they will need to call register for rewards again before they can claim rewards.
+ *         3. After some time has passed, the user calls claim rewards. This will calculate and store the reward tokens owed to the user according to
+ *            `LiquidityProvided * Blocks * RewardsRate`.
+ *         4. User calls withdraw rewards to withdraw the rewards owed to them. 
+ *         5. Once the user has called claim rewards, they do not need to call register for rewards unless they make changes to their liquidity position.
+ *            Before they update liquidity, the user needs to claim rewards. After they update liquidity, they must register for rewards again so they
+ *            accrue more rewards.
+ *
+ *         Note that by separating (3) and (4), user can accumulate rewards even if this contract does not have the sufficient reward tokens to pay them out
+ *         at that moment. A convenience function is provided to do both at once.
  * 
- *         An important design decision is that if the user has added/removed liquidity ince the last time they claimed rewards they will
- *         not be able to claim rewards until the next time they have added/removed liquidity. Becuase this is an external contract reading
- *         dex values it can only snapshot the accumulator values at the time of the call. If there has been no change to the liquidity added
- *         or removed accumulators between their register and claim calls we can be sure that they have supplied that amount of liquidity for
- *         the duration between the calls. If there has been a change we can't be sure how much liquidity they have supplied for the duration
- *         between the calls. The user could for example add liquidity, register, remove liquidity, add liquidity, and then claim rewards.
+ *         An important design decision is that if the user has added/removed liquidity since the last time they claimed rewards, they will
+ *         not be able to claim rewards until the next time they have added/removed liquidity. Because this is an external contract reading
+ *         dex values, it can only snapshot the accumulator values at the time of the call. If there has been no change to the liquidity added
+ *         or removed accumulators between their register and claim calls, we can be sure that they have supplied that amount of liquidity for
+ *         the duration between the calls. If there has been a change, we can't be sure how much liquidity they have supplied for the duration
+ *         between the calls. The user could, for example, add liquidity, register, remove liquidity, add liquidity, and then claim rewards.
  * 
- *         So the optimal behavior for the user, especially with concentrated liquidity where they may want to change their position often is
- *         to register for rewards, add liquidity, claim rewards, remove liquidty, and repeat for each position rebalancing. 
+ *         So the optimal behavior for the user, especially with concentrated liquidity where they may want to change their position often, is
+ *         to register for rewards, add liquidity, claim rewards, remove liquidity, and repeat for each position rebalancing. 
  *         This way they will get the maximum rewards for the liquidity they have provided.
  * 
  *         Admin Flow:
@@ -47,17 +51,48 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  *    */
 contract AltheaDexConcLiqContinuousMultiTokenIncentives is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
-    address public altheaDexAddress; // The StorageLayout-based Dex contract
+    StorageLayout public altheaDexAddress; // The StorageLayout-based Dex contract
 
+    /* @notice A reward program represents the incentives defined for a particular pool on the Althea-DEX.
+     *         The rewardToken is the ERC20 held by this contract which users may earn as rewards for providing concentrated liquidity.
+     *         The reward rate defines the amount of rewardToken distributed to users according to the equation
+     *         `LiquidityProvided * Blocks * RewardsRate`.
+     *         For example, if a program should distribute 10^18 rewardToken wei per 10000 blocks per 5000 liquidity units, the rewardRateNumerator
+     *         should be set to 10^18 and the rewardRateDenominator should be set to 10000 * 5000 = 50000000.
+     *
+     *         RewardPrograms can be initialized in a batch in the constructor or individually using createOrModifyRewardsProgram().
+     */
     struct RewardProgram {
         IERC20 rewardToken;
-        // Store ratio
         uint256 rewardRateNumerator;
         uint256 rewardRateDenominator;
         bool active;
     }
 
+    /// @notice Assigns the altheaDexAddress and initializes all the reward programs provided.
+    constructor(address _altheaDexAddress, address _owner, RewardProgram[] memory initialPrograms, bytes32[] memory programPools) {
+        require(initialPrograms.length == programPools.length, "Mismatched program and pool lengths");
+
+        // Save the DEX address
+        altheaDexAddress = StorageLayout(_altheaDexAddress);
+
+        // Create initial programs (if there are any)
+        for (uint256 i = 0; i < initialPrograms.length; i++) {
+            RewardProgram memory program = initialPrograms[i];
+            bytes32 pool = programPools[i];
+            _createOrModifyRewardsProgram(pool, address(program.rewardToken), program.rewardRateNumerator, program.rewardRateDenominator);
+        }
+
+        // Set the owner if desired
+        if (_owner != address(0)) {
+            transferOwnership(_owner);
+        }
+    }
+
+    /// @dev Tracks user liquidity snapshots from the DEX at registration and claim time, which populates the pendingRewards to be paid out to the user
+    ///      when this contract holds enough of the reward token to pay them out.
     struct UserRewardInfo {
         uint256 lastLiqAddedSnapshot;
         uint256 lastLiqRemovedSnapshot; 
@@ -65,7 +100,9 @@ contract AltheaDexConcLiqContinuousMultiTokenIncentives is ReentrancyGuard, Owna
         uint256 lastRegisterBlock;
     }
 
+    // Mapping of poolId => rewardToken => RewardProgram
     mapping(bytes32 => mapping(address => RewardProgram)) public rewardPrograms;
+    // Mapping of user => poolId => rewardToken => UserRewardInfo
     mapping(address => mapping(bytes32 => mapping(address => UserRewardInfo))) public userRewardInfo;
 
     event RewardsProgramCreatedOrModified(bytes32 indexed poolId, address indexed rewardToken, uint256 numerator, uint256 denominator);
@@ -73,15 +110,26 @@ contract AltheaDexConcLiqContinuousMultiTokenIncentives is ReentrancyGuard, Owna
     event ClaimedRewards(address indexed user, bytes32 indexed poolId, address indexed rewardToken, uint256 amount);
     event WithdrawnRewards(address indexed user, address indexed rewardToken, uint256 amount);
 
-    // Track all users in an array for demonstration in totalOwed
-    address[] public allUsers;
+    /// @notice Track all users in an EnumerableSet for demonstration in totalOwed
+    /// @dev We track users like this for O(1) insert and O(n) iteration, however efficiency of iteration is not critical
+    EnumerableSet.AddressSet private allUsers;
 
+    // Admin function - creates/updates a reward program for a pool and a rewards token
     function createOrModifyRewardsProgram(
         bytes32 poolId,
         address rewardToken,
         uint256 rewardRateNumerator,
         uint256 rewardRateDenominator
     ) external onlyOwner {
+        _createOrModifyRewardsProgram(poolId, rewardToken, rewardRateNumerator, rewardRateDenominator);
+    }
+
+    function _createOrModifyRewardsProgram(
+        bytes32 poolId,
+        address rewardToken,
+        uint256 rewardRateNumerator,
+        uint256 rewardRateDenominator
+    ) internal {
         require(rewardRateDenominator != 0, "Zero denominator");
         rewardPrograms[poolId][rewardToken] = RewardProgram({
             rewardToken: IERC20(rewardToken),
@@ -92,17 +140,23 @@ contract AltheaDexConcLiqContinuousMultiTokenIncentives is ReentrancyGuard, Owna
         emit RewardsProgramCreatedOrModified(poolId, rewardToken, rewardRateNumerator, rewardRateDenominator);
     }
 
+    /// @notice Admin-only: Deactivates a rewards program so that new rewards cannot be accrued, but existing rewards can still be withdrawn.
     function deactivateRewardsProgram(bytes32 poolId, address rewardToken) external onlyOwner {
         rewardPrograms[poolId][rewardToken].active = false;
     }
 
+    /* @notice Users must call this function after providing liquidity to a pool on the DEX to begin tracking their liquidity rewards.
+     *         IMPORTANT: Do not modify any liquidity positions in the pool after calling this function without first calling claimRewards/withdrawRewards or your rewards will be lost.
+     *         If you want to update a liquidity position, call claimRewards or withdrawRewards, update your liquidity, and then call registerForRewards again to accrue future rewards.
+     * @dev    This function tracks user liquidity accumulator values in the DEX and the registration block for later use in calculating rewards.
+     *         Rewards will only be tracked for users who have called this function after creating a liquidity position.
+     */
     function registerForRewards(bytes32 poolId, address rewardToken) external nonReentrant {
         RewardProgram storage program = rewardPrograms[poolId][rewardToken];
         require(program.active, "Program inactive");
 
-        if (!_isKnownUser(msg.sender)) {
-            allUsers.push(msg.sender);
-        }
+        // We could check that allUsers doesn't contain the user, but the add implementation will do that for us already.
+        allUsers.add(msg.sender);
 
         (uint256 userAdded, uint256 userRemoved) = _getUserLiqSnapshots(poolId, msg.sender);
         UserRewardInfo storage info = userRewardInfo[msg.sender][poolId][rewardToken];
@@ -113,7 +167,20 @@ contract AltheaDexConcLiqContinuousMultiTokenIncentives is ReentrancyGuard, Owna
         emit RegisteredForRewards(msg.sender, poolId, rewardToken);
     }
 
-    function claimRewards(bytes32 poolId, address rewardToken) public nonReentrant {
+    /* @notice Calculates the rewards earned after registering for rewards and tracks this in the user's pendingRewards for the pool.
+     *         IMPORTANT: Do not modify any liquidity positons in the pool after registering for rewards without first calling this function or your rewards will be lost.
+     *         This function merely tracks rewards, to receive the rewards owed to you, call withdrawRewards().
+     *         Users should typically call this function when withdrawRewards() has failed due to a transfer failure and they want to modify a liquidity position in the pool.
+     *         By calling this function, rewards are locked in and can be withdrawn later when the contract has been funded by calling withdrawRewards()
+     *         Call this function often, because rewards are only tracked for active programs. If you register for rewards and fail to claim them before the program ends,
+     *         you will lose any potential rewards owed.
+     * @dev    This function updates the user's pendingRewards for the pool but does not pay out rewards.
+     */
+    function claimRewards(bytes32 poolId, address rewardToken) external nonReentrant {
+        _claimRewards(poolId, rewardToken);
+    }
+
+    function _claimRewards(bytes32 poolId, address rewardToken) internal {
         RewardProgram storage program = rewardPrograms[poolId][rewardToken];
         UserRewardInfo storage info = userRewardInfo[msg.sender][poolId][rewardToken];
 
@@ -132,43 +199,57 @@ contract AltheaDexConcLiqContinuousMultiTokenIncentives is ReentrancyGuard, Owna
         emit ClaimedRewards(msg.sender, poolId, rewardToken, newlyEarned);
     }
 
+    /* @notice Calculates the rewards earned after registering for rewards and pays them out.
+     *         IMPORTANT: Do not modify any liquidity positons in the pool after registering for rewards without first calling this function or your rewards will be lost.
+     *         If this function call fails due to a transfer failure, you can call claimRewards instead to lock in rewards and claim later with this function once the
+     *         contract has been funded.
+     *         Call this function often, because rewards are only tracked for active programs. If you register for rewards and fail to withdraw/claim them before the program ends,
+     *         you will lose any potential rewards owed.
+     * @dev    This function calls claimRewards at the start and pays out the pendingRewards to the user.
+     */
     function withdrawRewards(bytes32 poolId, address rewardToken) external nonReentrant {
         // First run claim logic (even if program is inactive, let them withdraw pending)
-        claimRewards(poolId, rewardToken);
+        _claimRewards(poolId, rewardToken);
 
         UserRewardInfo storage info = userRewardInfo[msg.sender][poolId][rewardToken];
         uint256 amount = info.pendingRewards;
         require(amount > 0, "No rewards");
 
         info.pendingRewards = 0;
-        rewardPrograms[poolId][rewardToken].rewardToken.safeTransfer(msg.sender, amount);
+        rewardPrograms[poolId][rewardToken].rewardToken.safeTransfer(msg.sender, amount); // c(°o°)o
 
         emit WithdrawnRewards(msg.sender, rewardToken, amount);
     }
 
-    // View for a user's pending rewards
+    /* @notice View function which calculates the amount of reward tokens a user is entitled to if they claim now.
+     *         This function does not update the user's pendingRewards, it only calculates the rewards owed to the user.
+     *         This function is useful for users who want to call off-chain to know how much they will earn before calling claimRewards.
+    */
     function getPendingRewards(bytes32 poolId, address user, address rewardToken) external view returns (uint256) {
         RewardProgram memory program = rewardPrograms[poolId][rewardToken];
         UserRewardInfo memory info = userRewardInfo[user][poolId][rewardToken];
-        return info.pendingRewards + _simulateRewards(program, info, poolId, user);
+        return info.pendingRewards + _computeRewards(program, info, poolId, user);
     }
 
-    // Summation over known users (demonstration: not recommended for on-chain usage)
+    /* @notice View function which calculates the total amount of reward tokens owed to all users in a pool.
+     *         This function is useful for the admin to call off-chain to know how much the contract currently owes users.
+     */
     function totalOwed(bytes32 poolId, address rewardToken) external view returns (uint256 total) {
         RewardProgram memory program = rewardPrograms[poolId][rewardToken];
-        for (uint256 i = 0; i < allUsers.length; i++) {
-            address u = allUsers[i];
+        address[] memory users = allUsers.values();
+        for (uint256 i = 0; i < users.length; i++) {
+            address u = users[i];
             UserRewardInfo memory info = userRewardInfo[u][poolId][rewardToken];
             // Sum claimable + pending
-            uint256 claimable = _simulateRewards(program, info, poolId, u);
+            uint256 claimable = _computeRewards(program, info, poolId, u);
             total += (info.pendingRewards + claimable);
         }
     }
 
-    // Rewards calculation (returns zero if the user’s liquidity has changed since register)
+    /// @dev Rewards calculation (returns zero if the user’s liquidity has changed since register)
     function _computeRewards(
-        RewardProgram storage program,
-        UserRewardInfo storage info,
+        RewardProgram memory program,
+        UserRewardInfo memory info,
         bytes32 poolId,
         address user
     ) private view returns (uint256) {
@@ -177,76 +258,40 @@ contract AltheaDexConcLiqContinuousMultiTokenIncentives is ReentrancyGuard, Owna
             return 0;
         }
 
-        // Check if user’s liquidity changed
+        // If user’s liquidity has changed, they accrue no new rewards
         (uint256 curAdded, uint256 curRemoved) = _getUserLiqSnapshots(poolId, user);
         bool changed = (curAdded != info.lastLiqAddedSnapshot || curRemoved != info.lastLiqRemovedSnapshot);
         if (changed) {
             return 0;
         }
 
-        // No change => net liquidity is (lastLiqAddedSnapshot - lastLiqRemovedSnapshot)
-        uint256 netLiq = info.lastLiqAddedSnapshot > info.lastLiqRemovedSnapshot
-            ? info.lastLiqAddedSnapshot - info.lastLiqRemovedSnapshot
-            : 0;
-        uint256 blockDelta = block.number - info.lastRegisterBlock;
-
-        return
-            (netLiq * blockDelta * program.rewardRateNumerator) /
-            program.rewardRateDenominator;
+        return _rewardsEntitlement(program, info, block.number);
     }
 
-    // Purely for read usage in getPendingRewards
-    function _simulateRewards(
-        RewardProgram memory program,
-        UserRewardInfo memory info,
-        bytes32 poolId,
-        address user
-    ) private view returns (uint256) {
-        if (!program.active) {
-            return 0;
-        }
-        // Compare current accumulators with stored snapshots
-        (uint256 curAdded, uint256 curRemoved) = _getUserLiqSnapshots(poolId, user);
-        bool changed = (curAdded != info.lastLiqAddedSnapshot || curRemoved != info.lastLiqRemovedSnapshot);
-        if (changed) {
-            return 0;
-        }
-
-        uint256 netLiq = (info.lastLiqAddedSnapshot > info.lastLiqRemovedSnapshot)
-            ? (info.lastLiqAddedSnapshot - info.lastLiqRemovedSnapshot)
-            : 0;
-        uint256 blockDelta = block.number - info.lastRegisterBlock;
-        return
-            (netLiq * blockDelta * program.rewardRateNumerator) /
-            program.rewardRateDenominator;
-    }
-
-    // Helper: returns user’s added & removed concentrated liquidity from storage
+    /// @dev Returns user’s added & removed concentrated liquidity from storage
     function _getUserLiqSnapshots(bytes32 poolId, address user) internal view returns (uint256 added, uint256 removed) {
         added = _currentUserLiqAdded(poolId, user);
         removed = _currentUserLiqRemoved(poolId, user);
     }
 
-    // Replace stubs with actual StorageLayout calls for concentrated liquidity
+    /// @dev Returns a users accumulated liquidity added to a pool
     function _currentUserLiqAdded(bytes32 poolId, address user) internal view returns (uint256) {
-        // Example usage:
-        // return StorageLayout(altheaDexAddress).incentiveUserPoolConcLiqAddedAccumulators_(user, poolId);
-        return 0; // Stub
+        return altheaDexAddress.incentiveUserPoolConcLiqAddedAccumulators(user, poolId);
     }
 
+    /// @dev Returns a users accumulated liquidity removed from a pool
     function _currentUserLiqRemoved(bytes32 poolId, address user) internal view returns (uint256) {
-        // Example usage:
-        // return StorageLayout(altheaDexAddress).incentiveUserPoolConcLiqRemovedAccumulators_(user, poolId);
-        return 0; // Stub
+        return altheaDexAddress.incentiveUserPoolConcLiqRemovedAccumulators(user, poolId);
     }
 
-    // Mark user as known
-    function _isKnownUser(address user) private view returns (bool) {
-        for (uint256 i = 0; i < allUsers.length; i++) {
-            if (allUsers[i] == user) {
-                return true;
-            }
-        }
-        return false;
+    /// @dev Calculate rewards entitlement: NetLiquidity * NumBlocks * RateNumerator / RateDenominator
+    function _rewardsEntitlement(RewardProgram memory program, UserRewardInfo memory info, uint256 currBlock) internal pure returns (uint256) {
+        uint256 netLiq = (info.lastLiqAddedSnapshot > info.lastLiqRemovedSnapshot)
+            ? (info.lastLiqAddedSnapshot - info.lastLiqRemovedSnapshot)
+            : 0;
+        uint256 blockDelta = currBlock - info.lastRegisterBlock;
+        return
+            (netLiq * blockDelta * program.rewardRateNumerator) /
+            program.rewardRateDenominator;
     }
 }
