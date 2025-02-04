@@ -13,7 +13,6 @@ import { MockPermit } from '../typechain/MockPermit';
 import { QueryHelper } from '../typechain/QueryHelper';
 import { TestSettleLayer } from "../typechain/TestSettleLayer";
 import { CrocQuery } from "../typechain/CrocQuery";
-import { BootPath } from "../contracts/typechain";
 import { buildCrocSwapSex } from "./SetupDex";
 import { CrocSwapRouter, CrocSwapRouterBypass } from "../typechain";
 
@@ -347,7 +346,7 @@ export class TestPool {
             [ callCode, base, quote, this.poolIdx, lower, upper, 0, limitLow, limitHigh, useSurplus, this.lpConduit  ]);
     }
 
-    async encodeMintAmbientPath (liq: number,  limitLow: BigNumber, limitHigh: BigNumber,
+    async encodeMintAmbientPath (liq: BigNumberish,  limitLow: BigNumber, limitHigh: BigNumber,
         useSurplus: number): Promise<BytesLike> {
         let abiCoder = new ethers.utils.AbiCoder()
         let base = (await this.base).address
@@ -426,7 +425,7 @@ export class TestPool {
         return this.testMintFrom(await this.trader, lower, upper, liq, useSurplus)
     }
 
-    async testMintAmbient (liq: number, useSurplus?: number): Promise<ContractTransaction> {
+    async testMintAmbient (liq: BigNumberish, useSurplus?: number): Promise<ContractTransaction> {
         return this.testMintAmbientFrom(await this.trader, liq, useSurplus)
     }
 
@@ -528,14 +527,15 @@ export class TestPool {
         return (await this.dex).connect(await this.trader).userCmd(this.LONG_PROXY, inputBytes, this.overrides)
     }
 
-    async testMintAmbientFrom (from: Signer, liq: number, useSurplus: number = 0): Promise<ContractTransaction> {
+    async testMintAmbientFrom (from: Signer, liq: BigNumberish, useSurplus: number = 0): Promise<ContractTransaction> {
         await this.snapStart()
+        const lots = BigNumber.from(liq).mul(1024)
         if (this.useHotPath) {
-            let inputBytes = this.encodeMintAmbientPath(liq*1024, toSqrtPrice(0.000001), toSqrtPrice(100000000000.0), useSurplus)
+            let inputBytes = this.encodeMintAmbientPath(lots, toSqrtPrice(0.000001), toSqrtPrice(100000000000.0), useSurplus)
             return (await this.dex).connect(from).userCmd(this.WARM_PROXY, await inputBytes, this.overrides)
         } else {
             let directive = singleHop((await this.base).address,
-            (await this.quote).address, simpleMintAmbient(this.poolIdx, liq*1024))
+            (await this.quote).address, simpleMintAmbient(this.poolIdx, lots))
             let inputBytes = encodeOrderDirective(directive);
             return (await this.dex).connect(from).userCmd(this.LONG_PROXY, inputBytes, this.overrides)
         }

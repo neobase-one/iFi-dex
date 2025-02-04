@@ -56,7 +56,7 @@ export function simpleMint (poolIdx: BigNumberish, lowerTick: number, upperTick:
     }
 }
 
-export function simpleMintAmbient (poolIdx: BigNumberish, liq: number): PoolDirective  {
+export function simpleMintAmbient (poolIdx: BigNumberish, liq: BigNumberish): PoolDirective  {
     return { 
        poolIdx: poolIdx,
        passive: {
