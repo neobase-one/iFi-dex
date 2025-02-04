@@ -51,6 +51,31 @@ describe('ConcentratedIncentives', () => {
         );
     })
 
+    it("concentrated incentives are not paid to ambient positions", async () => {
+        let liq = 1000000;
+        await test1.testMintAmbient(liq); // Mint a concentrated position
+        liq = 1000000 * 1024; // The liq input is converted to units of 1024 for the position, so we update this value for the future
+
+        const rateNum = 10 ^ 18; // 1 token
+        const rateDen = 10 * 1024 * (10^18) // Every 10 blocks, every 1024 * 10^18 liquidity units
+        await incentives.createOrModifyConcentratedRewardsProgram(
+            baseQuotePoolId, 
+            rewardToken.address, 
+            rateNum,  
+            rateDen, 
+        );
+
+        await incentives.registerForConcentratedRewards(baseQuotePoolId, rewardToken.address);
+
+        // Mine 9 blocks to generate rewards, expecting a 10th block on the withdrawRewards() call
+        await hardhat.network.provider.send("hardhat_mine", ["0x9"]);
+
+        const traderAddress = await (await test1.trader).getAddress();
+
+        const pendingRewards = await incentives.getPendingRewards(baseQuotePoolId, traderAddress, rewardToken.address);
+        expect(pendingRewards).to.eq(0);
+    })
+
     it("mint, register, withdraw rewards", async () => {
         let liq = 1000000;
         await test1.testMint(-5000, 8000, liq); 
