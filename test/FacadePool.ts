@@ -70,6 +70,11 @@ export async function makeTokenNext (pool: TestPool): Promise<TestPool> {
     return makePoolFrom(pool.quote, tokenZ)
 }
 
+export async function makeStandaloneToken (): Promise<ERC20Token> {
+    let factory = await ethers.getContractFactory("MockERC20") as ContractFactory;
+    return new ERC20Token((await factory.deploy() as MockERC20));
+}
+
 export async function makePoolFrom (tokenX: Token, tokenY: Token, dex?: CrocSwapDex): Promise<TestPool> {
     let base = sortBaseToken(tokenX, tokenY)
     let quote = sortQuoteToken(tokenX, tokenY)
@@ -97,9 +102,9 @@ export interface Token {
 }
 
 export class ERC20Token implements Token {
-    address: string
-    contract: MockERC20
-    sendEth: boolean
+    public address: string
+    public contract: MockERC20
+    public sendEth: boolean
 
     constructor (token: MockERC20) {
         this.address = token.address
@@ -153,8 +158,8 @@ export class TestPool {
     other: Promise<Signer>
     third: Promise<Signer>
     permit: Promise<MockPermit>
-    base: Token
-    quote: Token
+    base: ERC20Token
+    quote: ERC20Token
     baseSnap: Promise<BigNumber>
     quoteSnap: Promise<BigNumber>
     useHotPath: boolean
@@ -171,8 +176,8 @@ export class TestPool {
     gasSpent: BigNumber
 
     constructor (base: Token, quote: Token, dex?: CrocSwapDex) {
-        this.base = base
-        this.quote = quote
+        this.base = base as ERC20Token
+        this.quote = quote as ERC20Token
         this.poolIdx = POOL_IDX
 
         let factory = ethers.getContractFactory("MockPermit") as Promise<ContractFactory>
