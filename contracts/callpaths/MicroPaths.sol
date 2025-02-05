@@ -192,8 +192,9 @@ contract MicroPaths is MarketSequencer {
                         PoolSpecs.PoolCursor memory pool)
         public payable returns (Chaining.PairFlow memory accum,
                                 uint128 priceOut, uint128 seedOut, uint128 concOut,
-                                uint64 ambientOut, uint64 concGrowthOut) {
-        sweepSwapLiq(accum, curve, midTick, swap, pool);
+                                uint64 ambientOut, uint64 concGrowthOut,
+                                int128 paidInBase, int128 paidInQuote) {
+        (paidInBase, paidInQuote) = sweepSwapLiq(accum, curve, midTick, swap, pool);
         
         priceOut = curve.priceRoot_;
         seedOut = curve.ambientSeeds_;

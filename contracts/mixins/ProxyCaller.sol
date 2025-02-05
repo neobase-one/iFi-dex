@@ -158,7 +158,7 @@ contract ProxyCaller is StorageLayout {
     function callSwap (Chaining.PairFlow memory accum,
                        CurveCache.Cache memory curve,
                        Directives.SwapDirective memory swap,
-                       PoolSpecs.PoolCursor memory pool) internal {
+                       PoolSpecs.PoolCursor memory pool) internal returns (int128 paidInBase, int128 paidInQuote) {
         (bool success, bytes memory output) =
             proxyPaths_[CrocSlots.MICRO_PROXY_IDX].delegatecall
             (abi.encodeWithSignature
@@ -171,9 +171,10 @@ contract ProxyCaller is StorageLayout {
          curve.curve_.ambientSeeds_,
          curve.curve_.concLiq_,
          curve.curve_.seedDeflator_,
-         curve.curve_.concGrowth_) = 
+         curve.curve_.concGrowth_,
+         paidInBase, paidInQuote) = 
             abi.decode(output, (Chaining.PairFlow, uint128, uint128, uint128,
-                                uint64, uint64));
+                                uint64, uint64, int128, int128));
 
         // swap() is the only operation that can change curve price, so have to mark
         // the tick cache as dirty.
