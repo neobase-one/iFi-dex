@@ -109,6 +109,51 @@ describe('FeeTracking', () => {
         const updatedUserFeeAccumulator = await (await test1.dex).incentiveUserPoolFeeAccumulators(traderAddress, baseQuotePoolId);
         expect(updatedUserFeeAccumulator).to.be.gt(0);
     });
+
+    it("fee odometer accumulators are updated on swap", async () => {
+        let liqAmbient = ethers.utils.parseEther("10000000");
+        let liqConcentrated = ethers.utils.parseEther("20000");
+
+        test1.base.contract.deposit(await (await test1.trader).getAddress(), liqAmbient.add(liqConcentrated).mul(ethers.utils.parseEther("1024")))
+        test1.quote.contract.deposit(await (await test1.trader).getAddress(), liqAmbient.add(liqConcentrated).mul(ethers.utils.parseEther("1024")))
+        test1.base.approve(await test1.trader, (await test1.dex).address, liqAmbient.add(liqConcentrated).mul(ethers.utils.parseEther("1024")))
+        test1.quote.approve(await test1.trader, (await test1.dex).address, liqAmbient.add(liqConcentrated).mul(ethers.utils.parseEther("1024")))
+
+        // Mint a concentrated position
+        await test1.testMint(-5000, 5000, liqConcentrated);
+        liqConcentrated = liqConcentrated.mul(1024); // Update value for future use
+
+        const poolFeeAccumulator = await(await test1.dex).incentivePoolFeeAccumulators(baseQuotePoolId);
+
+        // Execute a swap on the pool
+        await test1.testSwapB(false, true, ethers.utils.parseEther("1"), BigNumber.from(Math.round(2000000000001 * 2^64)));
+        expect(poolFeeAccumulator).to.be.eq(0);
+
+        // Check that the pool's incentive fee tracker value is updated correctly
+        const poolFeeAccumulatorPostSwap = await (await test1.dex).incentivePoolFeeAccumulators(baseQuotePoolId);
+        expect(poolFeeAccumulatorPostSwap).to.be.gt(0);
+
+        // Execute a harvest
+        await test1.testHarvest(-5000, 5000);
+
+        const traderAddress = await (await test1.trader).getAddress();
+
+        let lastAccum = poolFeeAccumulatorPostSwap;
+        // Execute another swap on the pool
+        for (let i = 0; i < 10; i++) {
+            const poolFeeAccumulatorPreSwap = await (await test1.dex).incentivePoolFeeAccumulators(baseQuotePoolId);
+            expect(poolFeeAccumulatorPreSwap).to.be.eq(lastAccum);
+            await testSwap(test1, await test1.trader, true, true, ethers.utils.parseEther("100000"), MAX_PRICE);
+
+            const poolFeeAccumulatorMidSwap = await (await test1.dex).incentivePoolFeeAccumulators(baseQuotePoolId);
+            expect(poolFeeAccumulatorMidSwap).to.be.gt(poolFeeAccumulatorPreSwap);
+            await testSwap(test1, await test1.trader, false, true, ethers.utils.parseEther("100000"), MIN_PRICE);
+
+            const poolFeeAccumulatorAfterSwap = await (await test1.dex).incentivePoolFeeAccumulators(baseQuotePoolId);
+            expect(poolFeeAccumulatorAfterSwap).to.be.gt(poolFeeAccumulatorMidSwap);
+            lastAccum = poolFeeAccumulatorAfterSwap;
+        }
+    });
 })
 
 async function testSwap(test: TestPool, from: Signer, isBuy: boolean, inBaseQty: boolean, qty: BigNumberish, price: BigNumber,
