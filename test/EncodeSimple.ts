@@ -93,6 +93,25 @@ export function simpleSwap (poolIdx: BigNumberish, isBuy: boolean, inBaseQty: bo
    }
 }
 
+export function simpleSwapB(poolIdx: BigNumberish, isBuy: boolean, inBaseQty: boolean, 
+    qty: BigNumber, limitPrice: BigNumber): PoolDirective  {
+    return { 
+       poolIdx: poolIdx,
+       passive: {
+        ambient: { isAdd: false, rollType: 0, liquidity: BigNumber.from(0) },
+        concentrated: []
+       },
+       swap: {
+           isBuy: isBuy,
+           inBaseQty: inBaseQty,
+           rollType: 0,
+           qty: qty,
+           limitPrice: BigNumber.from(limitPrice)
+       },
+       chain: { rollExit: false, swapDefer: false, offsetSurplus: false}
+   }
+}
+
 export function twoHopExit (poolIdx: number, baseIn: boolean): PoolDirective {
     return simpleSwap(poolIdx, baseIn, baseIn, 0, baseIn ? MAX_PRICE : MIN_PRICE)
 }
