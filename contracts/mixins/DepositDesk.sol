@@ -95,7 +95,7 @@ contract DepositDesk is SettleLayer {
         bytes32 toKey = tokenKey(to, token);
         moveSurplus(fromKey, toKey, size);
 
-        uint128 value = applyTransactVal(size, userBals_[fromKey].surplusCollateral_);
+        uint128 value = _convertTransactVal(size, userBals_[fromKey].surplusCollateral_);
         emit CrocEvents.Surplus(lockHolder_, to, token, -int128(value), userBals_[fromKey].surplusCollateral_, userBals_[toKey].surplusCollateral_);
     }
 
@@ -124,7 +124,7 @@ contract DepositDesk is SettleLayer {
         bytes32 toKey = tokenKey(to, token);
         moveSurplus(fromKey, toKey, size);
 
-        uint128 value = applyTransactVal(size, userBals_[fromKey].surplusCollateral_);
+        uint128 value = _convertTransactVal(size, userBals_[fromKey].surplusCollateral_);
         emit CrocEvents.Surplus(lockHolder_, to, token, -int128(value), userBals_[fromKey].surplusCollateral_, userBals_[toKey].surplusCollateral_);
     }
 
@@ -138,13 +138,24 @@ contract DepositDesk is SettleLayer {
         userBals_[toKey].surplusCollateral_ += value;
     }
 
-    /* @notice Converts an encoded transfer argument to the actual quantity to transfer.
-     *         Includes syntactic sugar for special transfer types including:
-     *            Positive Value - Transfer this specified amount
-     *            Zero Value - Transfer the full balance
-     *            Negative Value - Transfer everything *above* this specified amount. */
+    /** @notice Converts and checks encoded transfer argument to the actual quantity to transfer.
+      * @dev Requires that value be less than or equal to balance, use convertTransactVal to avoid require()
+      *         Includes syntactic sugar for special transfer types including:
+      *            Positive Value - Transfer this specified amount
+      *            Zero Value - Transfer the full balance
+      *            Negative Value - Transfer everything *above* this specified amount. */
     function applyTransactVal (int128 qty, uint128 balance) private pure
         returns (uint128 value) {
+        value = _convertTransactVal(qty, balance);
+        require(value <= balance, "SC");
+    }
+
+    /** @notice Converts an encoded transfer argument to the actual quantity to transfer.
+      * @dev WARNING: This function does not provide a critical security check used when modifying surplus balances
+      *      DO NOT USE THIS WHEN MODIFYING BALANCES - call applyTransactVal() instead
+      *      This function is best used for converting a transact val for formatted event arguments
+      */
+    function _convertTransactVal (int128 qty, uint128 balance) private pure returns (uint128 value) {
         if (qty < 0) {
             value = balance - uint128(-qty);
         } else if (qty == 0) {
@@ -152,7 +163,6 @@ contract DepositDesk is SettleLayer {
         } else {
             value = uint128(qty);
         }
-        require(value <= balance, "SC");        
     }
 }
 
