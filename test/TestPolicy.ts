@@ -73,25 +73,6 @@ describe('CrocPolicy', () => {
         await expect(treasury.transferGovernance(ops2.address, treasury2.address, ops2.address)).to.be.reverted
     })
 
-    it("transfer not accepted", async() => {
-        let factory = await ethers.getContractFactory("MockTimelock");
-        let treasury2 = (await factory.deploy(accts[3].address)) as MockTimelock;
-        let ops2 = (await factory.deploy(accts[3].address)) as MockTimelock;
-        let emergency2 = (await factory.deploy(accts[3].address)) as MockTimelock;
-
-        // Will reject because the MockTimelock is not set to accept CrocPolicy address
-        await expect(treasury.transferGovernance(ops2.address, treasury.address, emergency.address)).to.be.reverted
-        await expect(treasury.transferGovernance(ops.address, treasury2.address, emergency.address)).to.be.reverted
-        await expect(treasury.transferGovernance(ops.address, treasury.address, emergency2.address)).to.be.reverted
-
-        factory = await ethers.getContractFactory("MockERC20");
-        let fakeTimelock = (await factory.deploy()) as MockERC20;
-
-        // Will reject because the pointed contract has no acceptAdmin() function
-        await expect(treasury.transferGovernance(ops.address, fakeTimelock.address, emergency.address)).to.be.reverted
-    })
-
-
     it("ops resolution", async() => {
         // Only treasury can transfer authority
         ops.opsResolution(minion.address, 5, "0x1234")

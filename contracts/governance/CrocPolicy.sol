@@ -120,11 +120,6 @@ contract CrocPolicy is ICrocMaster {
         opsAuthority_ = ops;
         treasuryAuthority_ = treasury;
         emergencyAuthority_ = emergency;  
-        // Do not enforce the use of Timelock because CrocPolicy should be controlled by the Althea-L1 gov module
-
-        // Timelock(payable(treasury)).acceptAdmin();
-        // Timelock(payable(ops)).acceptAdmin();
-        // Timelock(payable(emergency)).acceptAdmin();
     }
 
     /* @notice Resolution from the ops authority which calls protocolCmd() on the 
