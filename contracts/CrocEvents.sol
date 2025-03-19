@@ -93,7 +93,7 @@ library CrocEvents {
      * @param lowerTick The lower price tick of the range position.
      * @param upperTick The upper price tick of the range position.
      */
-    event MintKnockout(address indexed user, address indexed base, address indexed quote, uint256 poolIdx, int128 baseFlow, int128 quoteFlow, bool isBid, int24 lowerTick, int24 upperTick);
+    event MintKnockout(address indexed user, address indexed base, address indexed quote, uint256 poolIdx, uint128 liq, int128 baseFlow, int128 quoteFlow, bool isBid, int24 lowerTick, int24 upperTick);
 
     /* @notice Emitted when a knockout liquidity position is burned, removing an in-progress knockout position from the pool.
      * @param user The address of the position holder.
@@ -107,7 +107,7 @@ library CrocEvents {
      * @param upperTick The upper price tick of the range position.
      * @param rewardFees The amount of ambient liquidity (as sqrt(X*Y)) removed from the pool due to payout of accrued fees.
      */
-    event BurnKnockout(address indexed user, address indexed base, address indexed quote, uint256 poolIdx, int128 baseFlow, int128 quoteFlow, bool isBid, int24 lowerTick, int24 upperTick, uint128 rewardFees);
+    event BurnKnockout(address indexed user, address indexed base, address indexed quote, uint256 poolIdx, uint128 liq, int128 baseFlow, int128 quoteFlow, bool isBid, int24 lowerTick, int24 upperTick, uint128 rewardFees);
 
     /* @notice Emitted when a complete knockout liquidity position is claimed or recovered, deleting the position from the pool.
      * @param user The address of the position holder.
@@ -121,7 +121,7 @@ library CrocEvents {
      * @param upperTick The upper price tick of the range position.
      * @param rewardFees The amount of ambient liquidity (as sqrt(X*Y)) removed from the pool due to payout of accrued fees.
      */
-    event WithdrawKnockout(address indexed user, address indexed base, address indexed quote, uint256 poolIdx, int128 baseFlow, int128 quoteFlow, bool isBid, int24 lowerTick, int24 upperTick, uint128 rewardFees);
+    event WithdrawKnockout(address indexed user, address indexed base, address indexed quote, uint256 poolIdx, uint128 liq, int128 baseFlow, int128 quoteFlow, bool isBid, int24 lowerTick, int24 upperTick, uint128 rewardFees);
 
     /* @notice Emitted when a user's surplus collateral is changed by deposit, withdrawal, or transfer (including side-pocket transfers).
      * @param from The address of the user sending the surplus collateral.

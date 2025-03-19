@@ -93,20 +93,21 @@ contract KnockoutLiqPath is TradeMatcher, SettleLayer {
                         KnockoutLiq.KnockoutPosLoc memory loc,
                         uint8 reserveFlags, bytes memory args)
         private returns (int128 baseFlow, int128 quoteFlow) {        
+        uint128 liq;
         if (code == UserCmd.MINT_KNOCKOUT) {
-            (baseFlow, quoteFlow) = mintCmd(base, quote, pool, curve, loc, args);
-            emit CrocEvents.MintKnockout(lockHolder_, base, quote, poolIdx, baseFlow, quoteFlow, loc.isBid_, loc.lowerTick_, loc.upperTick_);
+            (baseFlow, quoteFlow, liq) = mintCmd(base, quote, pool, curve, loc, args);
+            emit CrocEvents.MintKnockout(lockHolder_, base, quote, poolIdx, liq, baseFlow, quoteFlow, loc.isBid_, loc.lowerTick_, loc.upperTick_);
         } else if (code == UserCmd.BURN_KNOCKOUT) {
             uint128 rewardFees = 0;
-            (baseFlow, quoteFlow, rewardFees) = burnCmd(base, quote, pool, curve, loc, args);
-            emit CrocEvents.BurnKnockout(lockHolder_, base, quote, poolIdx, baseFlow, quoteFlow, loc.isBid_, loc.lowerTick_, loc.upperTick_, rewardFees);
+            (baseFlow, quoteFlow, liq, rewardFees) = burnCmd(base, quote, pool, curve, loc, args);
+            emit CrocEvents.BurnKnockout(lockHolder_, base, quote, poolIdx, liq, baseFlow, quoteFlow, loc.isBid_, loc.lowerTick_, loc.upperTick_, rewardFees);
         } else if (code == UserCmd.CLAIM_KNOCKOUT) {
             uint128 rewardFees = 0;
-            (baseFlow, quoteFlow, rewardFees) = claimCmd(pool.hash_, curve, loc, args);
-            emit CrocEvents.WithdrawKnockout(lockHolder_, base, quote, poolIdx, baseFlow, quoteFlow, loc.isBid_, loc.lowerTick_, loc.upperTick_, rewardFees);
+            (baseFlow, quoteFlow, liq, rewardFees) = claimCmd(pool.hash_, curve, loc, args);
+            emit CrocEvents.WithdrawKnockout(lockHolder_, base, quote, poolIdx, liq, baseFlow, quoteFlow, loc.isBid_, loc.lowerTick_, loc.upperTick_, rewardFees);
         } else if (code == UserCmd.RECOVER_KNOCKOUT) {
-            (baseFlow, quoteFlow) = recoverCmd(pool.hash_, loc, args);
-            emit CrocEvents.WithdrawKnockout(lockHolder_, base, quote, poolIdx, baseFlow, quoteFlow, loc.isBid_, loc.lowerTick_, loc.upperTick_, 0);
+            (baseFlow, quoteFlow, liq) = recoverCmd(pool.hash_, loc, args);
+            emit CrocEvents.WithdrawKnockout(lockHolder_, base, quote, poolIdx, liq, baseFlow, quoteFlow, loc.isBid_, loc.lowerTick_, loc.upperTick_, 0);
         } else {
             revert("Invalid command");
         }
@@ -119,13 +120,13 @@ contract KnockoutLiqPath is TradeMatcher, SettleLayer {
                       CurveMath.CurveState memory curve,
                       KnockoutLiq.KnockoutPosLoc memory loc,
                       bytes memory args) private returns
-        (int128 baseFlow, int128 quoteFlow) {
+        (int128 baseFlow, int128 quoteFlow, uint128 liq) {
         (uint128 qty, bool insideMid) = abi.decode(args, (uint128,bool));
         
         int24 priceTick = curve.priceRoot_.getTickAtSqrtRatio();
         require(loc.spreadOkay(priceTick, insideMid), "KL");
 
-        uint128 liq = Chaining.sizeConcLiq(qty, true, curve.priceRoot_,
+        liq = Chaining.sizeConcLiq(qty, true, curve.priceRoot_,
                                            loc.lowerTick_, loc.upperTick_, loc.isBid_);
         verifyPermitMint(pool, base, quote, loc.lowerTick_, loc.upperTick_, liq);
 
@@ -141,14 +142,14 @@ contract KnockoutLiqPath is TradeMatcher, SettleLayer {
                       CurveMath.CurveState memory curve,
                       KnockoutLiq.KnockoutPosLoc memory loc,
                       bytes memory args) private returns
-        (int128 baseFlow, int128 quoteFlow, uint128 reward) {
+        (int128 baseFlow, int128 quoteFlow, uint128 liq, uint128 reward) {
         (uint128 qty, bool inLiqQty, bool insideMid) =
             abi.decode(args, (uint128,bool,bool));
 
         int24 priceTick = curve.priceRoot_.getTickAtSqrtRatio();
         require(loc.spreadOkay(priceTick, insideMid), "KL");
 
-        uint128 liq = inLiqQty ? qty :
+        liq = inLiqQty ? qty :
             Chaining.sizeConcLiq(qty, false, curve.priceRoot_,
                                  loc.lowerTick_, loc.upperTick_, loc.isBid_);        
         verifyPermitBurn(pool, base, quote, loc.lowerTick_, loc.upperTick_, liq);
@@ -170,12 +171,12 @@ contract KnockoutLiqPath is TradeMatcher, SettleLayer {
     function claimCmd (bytes32 pool, CurveMath.CurveState memory curve,
                        KnockoutLiq.KnockoutPosLoc memory loc,
                        bytes memory args) private returns
-        (int128 baseFlow, int128 quoteFlow, uint128 reward) {
+        (int128 baseFlow, int128 quoteFlow, uint128 liq, uint128 reward) {
         (uint160 root, uint256[] memory proof) = abi.decode(args, (uint160,uint256[]));
 
         // No permit check because permit oracles do not control knockout claims
         // (See ICrocPermitOracle for more information)
-        (baseFlow, quoteFlow, reward) = claimKnockout(curve, loc, root, proof, pool);
+        (baseFlow, quoteFlow, liq, reward) = claimKnockout(curve, loc, root, proof, pool);
         commitCurve(pool, curve);
     }
     
@@ -192,13 +193,13 @@ contract KnockoutLiqPath is TradeMatcher, SettleLayer {
      * @return quoteFlow The total base token flow from the pool to the user */
     function recoverCmd (bytes32 pool, KnockoutLiq.KnockoutPosLoc memory loc,
                          bytes memory args) private returns
-        (int128 baseFlow, int128 quoteFlow) {
+        (int128 baseFlow, int128 quoteFlow, uint128 liq) {
         (uint32 pivotTime) = abi.decode(args, (uint32));
         
         // No permit check because permit oracles do not control knockout claims
         // (See ICrocPermitOracle for more information)
 
-        (baseFlow, quoteFlow) = recoverKnockout(loc, pivotTime, pool);
+        (baseFlow, quoteFlow, liq) = recoverKnockout(loc, pivotTime, pool);
         // No need to commit curve because recover doesn't touch curve.
     }
 
