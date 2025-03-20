@@ -87,6 +87,7 @@ library CrocEvents {
      * @param base The address of the base token involved.
      * @param quote The address of the quote token involved.
      * @param poolIdx The template of the relevant pool.
+     * @param liq The amount of liquidity (in sqrt(X*Y) terms) being added to the pool.
      * @param baseFlow A positive value indicates tokens flowing into the pool, negative indicates tokens flowing out of it
      * @param quoteFlow A positive value indicates tokens flowing into the pool, negative indicates tokens flowing out of it
      * @param isBid Indicates the direction of the knockout position, if isBid then knockout is at lowerTick, else upperTick
@@ -100,6 +101,7 @@ library CrocEvents {
      * @param base The address of the base token involved.
      * @param quote The address of the quote token involved.
      * @param poolIdx The template of the relevant pool.
+     * @param liq The amount of liquidity (in sqrt(X*Y) terms) being removed from the pool.
      * @param baseFlow A positive value indicates tokens flowing into the pool, negative indicates tokens flowing out of it
      * @param quoteFlow A positive value indicates tokens flowing into the pool, negative indicates tokens flowing out of it
      * @param isBid Indicates the direction of the knockout position, if isBid then knockout is at lowerTick, else upperTick
@@ -114,6 +116,7 @@ library CrocEvents {
      * @param base The address of the base token involved.
      * @param quote The address of the quote token involved.
      * @param poolIdx The template of the relevant pool.
+     * @param liq The amount of liquidity (in sqrt(X*Y) terms) removed from the pool when the knockout pivot was crossed.
      * @param baseFlow A positive value indicates tokens flowing into the pool, negative indicates tokens flowing out of it
      * @param quoteFlow A positive value indicates tokens flowing into the pool, negative indicates tokens flowing out of it
      * @param isBid Indicates the direction of the knockout position, if isBid then knockout is at lowerTick, else upperTick
