@@ -1,14 +1,14 @@
 
-import { CrocSwapDexSeed } from '../../typechain/CrocSwapDexSeed';
+import { CrocSwapDexSeed } from '../../../typechain/CrocSwapDexSeed';
 import { ethers } from 'hardhat';
 import { ContractFactory, BytesLike, BigNumber, Signer, ContractTransaction } from 'ethers';
 import { JsonRpcProvider } from '@ethersproject/providers';
-import { toSqrtPrice, fromSqrtPrice, maxSqrtPrice } from '../../test/FixedPoint';
+import { toSqrtPrice, fromSqrtPrice, maxSqrtPrice } from '../../../test/FixedPoint';
 import { MockBypassERC20 } from '../../typechain/MockBypassERC20';
-import { QueryHelper } from '../../typechain/QueryHelper';
+import { QueryHelper } from '../../../typechain/QueryHelper';
 import { CrocSwapDex } from '../../contracts/typechain/CrocSwapDex';
 import { minSqrtPrice } from './tmpSwap';
-import { addrLessThan } from '../../test/FacadePool';
+import { addrLessThan } from '../../../test/FacadePool';
 
 /* Helper script for deploying a basic mock setup to a localhost or test network.
  * Only for ad-hoc testing purposes. Do NOT use in production. */

@@ -3,9 +3,9 @@
  * wallet. (Also installs ColdPath as necessary part of the workflow)
  */
 
-import { ColdPath, CrocDeployer, CrocPolicy, CrocSwapDex } from '../../../typechain';
-import { BOOT_PROXY_IDX, COLD_PROXY_IDX } from '../../constants/addrs';
-import { inflateAddr, initChain, refContract, traceContractTx, traceTxResp } from '../../libs/chain';
+import { ColdPath, CrocDeployer, CrocPolicy, CrocSwapDex } from '../../../../typechain';
+import { BOOT_PROXY_IDX, COLD_PROXY_IDX } from '../../../constants/addrs';
+import { inflateAddr, initChain, refContract, traceContractTx, traceTxResp } from '../../../libs/chain';
 import { AbiCoder } from '@ethersproject/abi';
 
 const abi = new AbiCoder()

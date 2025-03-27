@@ -1,12 +1,12 @@
 
-import { CrocSwapDexSeed } from '../../typechain/CrocSwapDexSeed';
+import { CrocSwapDexSeed } from '../../../typechain/CrocSwapDexSeed';
 import { ethers } from 'hardhat';
 import { ContractFactory, BytesLike, BigNumber } from 'ethers';
 import { JsonRpcProvider } from '@ethersproject/providers';
-import { toSqrtPrice, fromSqrtPrice } from '../../test/FixedPoint';
-import { MockERC20 } from '../../typechain/MockERC20';
-import { QueryHelper } from '../../typechain/QueryHelper';
-import { CrocSwapDex } from '../../typechain/CrocSwapDex';
+import { toSqrtPrice, fromSqrtPrice } from '../../../test/FixedPoint';
+import { MockERC20 } from '../../../typechain/MockERC20';
+import { QueryHelper } from '../../../typechain/QueryHelper';
+import { CrocSwapDex } from '../../../typechain/CrocSwapDex';
 
 /* Helper script for testing a simple swap. Do NOT use in production. */
 

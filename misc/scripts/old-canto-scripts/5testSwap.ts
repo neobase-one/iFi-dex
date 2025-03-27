@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
-import { ZERO_ADDR } from "../../test/FixedPoint";
-import { CrocQuery, CrocSwapDex, MockERC20 } from "../../typechain";
+import { ZERO_ADDR } from "../../../test/FixedPoint";
+import { CrocQuery, CrocSwapDex, MockERC20 } from "../../../typechain";
 import addresses from "./deployedContractAddresses.json";
 import { attachToContracts } from "./utils";
 import { assert } from "console";

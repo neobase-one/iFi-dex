@@ -1,6 +1,6 @@
 /* Creates the sidecar proxy contracts and periphery contracts. */
 
-import { initProvider, validateDeploy } from '../libs/chain';
+import { initProvider, validateDeploy } from '../../libs/chain';
 
 let { addrs, provider: provider } = initProvider()
 

@@ -7,11 +7,11 @@
 
 import { ethers } from 'hardhat';
 import { BigNumber } from 'ethers';
-import { ColdPath, CrocDeployer, CrocPolicy, CrocSwapDex } from '../../../typechain';
-import { mapSalt } from '../../constants/salts';
-import { CROC_ADDRS } from '../../constants/addrs';
-import { initChain, refContract, traceContractTx, traceTxResp } from '../../libs/chain';
-import { RPC_URLS } from '../../constants/rpcs';
+import { ColdPath, CrocDeployer, CrocPolicy, CrocSwapDex } from '../../../../typechain';
+import { mapSalt } from '../../../constants/salts';
+import { CROC_ADDRS } from '../../../constants/addrs';
+import { initChain, refContract, traceContractTx, traceTxResp } from '../../../libs/chain';
+import { RPC_URLS } from '../../../constants/rpcs';
 
 async function vanityDeploy() {
     let { addrs, chainId, wallet: authority } = initChain()

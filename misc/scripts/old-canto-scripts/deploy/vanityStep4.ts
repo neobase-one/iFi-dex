@@ -1,6 +1,6 @@
 /* Creates the sidecar proxy contracts and periphery contracts. */
 
-import { inflateAddr, initChain } from '../../libs/chain';
+import { inflateAddr, initChain } from '../../../libs/chain';
 import { AbiCoder } from '@ethersproject/abi';
 
 const abi = new AbiCoder()

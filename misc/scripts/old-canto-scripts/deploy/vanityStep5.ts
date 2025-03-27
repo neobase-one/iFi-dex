@@ -1,9 +1,9 @@
 /* Installs the major sidecar proxy contracts to CrocSwapDex through CrocPolicy
  * calls. */
 
-import { ColdPath, CrocPolicy, CrocSwapDex } from '../../../typechain';
-import { BOOT_PROXY_IDX, FLAG_CROSS_PROXY_IDX, KNOCKOUT_LP_PROXY_IDX, LONG_PROXY_IDX, LP_PROXY_IDX, MICRO_PROXY_IDX, SWAP_PROXY_IDX } from '../../constants/addrs';
-import { inflateAddr, initChain, refContract, traceContractTx, traceTxResp } from '../../libs/chain';
+import { ColdPath, CrocPolicy, CrocSwapDex } from '../../../../typechain';
+import { BOOT_PROXY_IDX, FLAG_CROSS_PROXY_IDX, KNOCKOUT_LP_PROXY_IDX, LONG_PROXY_IDX, LP_PROXY_IDX, MICRO_PROXY_IDX, SWAP_PROXY_IDX } from '../../../constants/addrs';
+import { inflateAddr, initChain, refContract, traceContractTx, traceTxResp } from '../../../libs/chain';
 import { AbiCoder } from '@ethersproject/abi';
 
 const abi = new AbiCoder()

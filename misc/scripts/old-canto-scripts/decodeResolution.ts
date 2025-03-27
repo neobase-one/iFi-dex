@@ -1,7 +1,7 @@
-import { initProvider, refContract } from '../libs/chain';
-import { decodePolicySched, treasuryResolution, CrocProtocolCmd } from '../libs/governance';
-import { CrocSwapDex, TimelockAccepts } from '../../typechain';
-import { CrocPolicy } from '../../typechain';
+import { initProvider, refContract } from '../../libs/chain';
+import { decodePolicySched, treasuryResolution, CrocProtocolCmd } from '../../libs/governance';
+import { CrocSwapDex, TimelockAccepts } from '../../../typechain';
+import { CrocPolicy } from '../../../typechain';
 import { AbiCoder } from '@ethersproject/abi';
 
 async function decode (calldata: string) {

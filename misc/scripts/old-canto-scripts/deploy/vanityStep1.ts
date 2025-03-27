@@ -6,7 +6,7 @@
  * npx hardhat run 
  */
 
-import { inflateAddr, initChain } from '../../libs/chain';
+import { inflateAddr, initChain } from '../../../libs/chain';
 
 async function deploy() {
     let { addrs, chainId, wallet: authority } = initChain()

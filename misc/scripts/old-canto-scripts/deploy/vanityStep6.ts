@@ -1,13 +1,13 @@
 /* Installs the major sidecar proxy contracts to CrocSwapDex through CrocPolicy
  * calls. */
 
-import { inflateAddr, initChain, refContract, traceContractTx, traceTxResp } from '../../libs/chain';
+import { inflateAddr, initChain, refContract, traceContractTx, traceTxResp } from '../../../libs/chain';
 import { AbiCoder } from '@ethersproject/abi';
-import { CrocPolicy, ERC20, TimelockAccepts } from '../../../typechain';
-import { BOOT_PROXY_IDX, LP_PROXY_IDX, TOKEN_ADDRS } from '../../constants/addrs';
+import { CrocPolicy, ERC20, TimelockAccepts } from '../../../../typechain';
+import { BOOT_PROXY_IDX, LP_PROXY_IDX, TOKEN_ADDRS } from '../../../constants/addrs';
 import { BigNumber, BytesLike, ethers } from 'ethers';
 import { MockERC20 } from '../../../contracts/typechain';
-import { opsResolution, populateTimelockCalls } from '../../libs/governance';
+import { opsResolution, populateTimelockCalls } from '../../../libs/governance';
 
 const abi = new AbiCoder()
 let cmd

@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 import { BigNumber } from "ethers";
-import { ZERO_ADDR } from "../../test/FixedPoint";
+import { ZERO_ADDR } from "../../../test/FixedPoint";
 
 import addresses from "./deployedContractAddresses.json";
 import fs from "fs";

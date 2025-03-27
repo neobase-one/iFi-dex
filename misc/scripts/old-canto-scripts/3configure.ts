@@ -1,21 +1,21 @@
 import { ethers } from "hardhat";
 import { BigNumber } from "ethers";
-import { ZERO_ADDR } from "../../test/FixedPoint";
-import { CrocSwapDex } from "../../typechain/CrocSwapDex";
-import { ColdPath } from "../../typechain/ColdPath";
-import { WarmPath } from "../../typechain/WarmPath";
-import { LongPath } from "../../typechain/LongPath";
-import { MicroPaths } from "../../typechain/MicroPaths";
-import { CrocPolicy } from "../../typechain/CrocPolicy";
-import { CrocQuery } from "../../typechain/CrocQuery";
-import { HotPath } from "../../typechain/HotPath";
+import { ZERO_ADDR } from "../../../test/FixedPoint";
+import { CrocSwapDex } from "../../../typechain/CrocSwapDex";
+import { ColdPath } from "../../../typechain/ColdPath";
+import { WarmPath } from "../../../typechain/WarmPath";
+import { LongPath } from "../../../typechain/LongPath";
+import { MicroPaths } from "../../../typechain/MicroPaths";
+import { CrocPolicy } from "../../../typechain/CrocPolicy";
+import { CrocQuery } from "../../../typechain/CrocQuery";
+import { HotPath } from "../../../typechain/HotPath";
 import {
   CrocImpact,
   KnockoutFlagPath,
   KnockoutLiqPath,
   MockERC20,
   SafeModePath,
-} from "../../typechain";
+} from "../../../typechain";
 import { assert } from "console";
 import addresses from "./deployedContractAddresses.json";
 import { attachToContracts } from "./utils";

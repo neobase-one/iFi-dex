@@ -14,7 +14,7 @@ import {
   KnockoutLiqPath,
   MockERC20,
   SafeModePath,
-} from "../../typechain";
+} from "../../../typechain";
 import fs from "fs";
 
 export async function sleep(ms: number) {

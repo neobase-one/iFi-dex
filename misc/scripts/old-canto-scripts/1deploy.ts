@@ -1,14 +1,14 @@
 import { ethers } from "hardhat";
 import { BigNumber } from "ethers";
-import { ZERO_ADDR } from "../../test/FixedPoint";
-import { CrocSwapDex } from "../../typechain/CrocSwapDex";
-import { ColdPath } from "../../typechain/ColdPath";
-import { WarmPath } from "../../typechain/WarmPath";
-import { LongPath } from "../../typechain/LongPath";
-import { MicroPaths } from "../../typechain/MicroPaths";
-import { CrocPolicy } from "../../typechain/CrocPolicy";
-import { CrocQuery } from "../../typechain/CrocQuery";
-import { HotPath } from "../../typechain/HotPath";
+import { ZERO_ADDR } from "../../../test/FixedPoint";
+import { CrocSwapDex } from "../../../typechain/CrocSwapDex";
+import { ColdPath } from "../../../typechain/ColdPath";
+import { WarmPath } from "../../../typechain/WarmPath";
+import { LongPath } from "../../../typechain/LongPath";
+import { MicroPaths } from "../../../typechain/MicroPaths";
+import { CrocPolicy } from "../../../typechain/CrocPolicy";
+import { CrocQuery } from "../../../typechain/CrocQuery";
+import { HotPath } from "../../../typechain/HotPath";
 import {
   CrocImpact,
   HotProxy,
@@ -16,8 +16,8 @@ import {
   KnockoutLiqPath,
   MockERC20,
   SafeModePath,
-} from "../../typechain";
-import { sleep, contractWasDeployed, writeContractsToFile } from "./utils";
+} from "../../../typechain";
+import { sleep, contractWasDeployed, writeContractsToFile } from "../utils";
 
 let override = {
   gasPrice: BigNumber.from("10").pow(9).mul(4),
