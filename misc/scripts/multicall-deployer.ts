@@ -1,4 +1,4 @@
-import { Multicall3 } from "../../../typechain";
+import { Multicall3 } from "../../typechain";
 import { ethers } from "ethers";
 import fs from "fs";
 import commandLineArgs from "command-line-args";
