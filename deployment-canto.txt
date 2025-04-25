@@ -1,0 +1,14 @@
+CrocSwapDex deployed at Address -  0xBb623CAD966C309F3DEbEa0895edf64144ccEa01
+HotProxy deployed at Address -  0x504148c4A37F1C776638192E5051F455BaA63799
+ColdPath deployed at Address -  0x4e387dfc8642c5af49aF75F064A8088f55d2766B
+WarmPath deployed at Address -  0x36ceC66FaA92f5772D1015569918209Ad91274C6
+LongPath deployed at Address -  0x49a6122827516044A842D4371C34D7A7c73f1A53
+MicroPaths deployed at Address -  0xB6A04932Ea4934561187b60f08E363724c168af6
+KnockoutFlagPath deployed at Address -  0x3362C0896BFdcBf7FCC6B3DF7222c6330c2149c4
+KnockoutLiqPath deployed at Address -  0x68E2f74668857b22A2100D20251C1E99A5C70132
+SafeModePath deployed at Address -  0x5782FDF8c9f880a56f682e36e291E62a25BcaE7F
+CrocPolicy deployed at Address -  0xA6Edd9390D8A47F1a2aF3668215775163847a877
+CrocQuery deployed at Address -  0xc3caA0457dD6fB264Fa04F0fc3ee6d646e9D6e44
+CrocImpact deployed at Address -  0xc53b37443a16318EE6d8147d133DEaD4eA39E296
+ColdPathUpgrade deployed at Address -  0xCf87D7a7E5451636c5AFC56eed26AFfF0A24415d
+Multicall3 deployed at Address -  0x3fa21404b13AE04361729c403477b11912EFcfDE
